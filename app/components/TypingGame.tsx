@@ -1,26 +1,55 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
+import { useSession } from "next-auth/react"
+import wordLists from "../wordList/words.json"
 
-const WORD_LISTS = {
-  easy: ["the", "be", "to", "of", "and", "a", "in", "that", "have", "it", "for", "not", "on", "with", "he", "as", "you", "do", "at", "this", "but", "his", "by", "from", "they", "we", "say", "her", "she", "or", "an", "will", "my", "one", "all", "would", "there", "their", "what", "so", "up", "out", "if", "about", "who", "get", "which", "go", "me"],
-  normal: ["about", "after", "again", "being", "between", "both", "could", "each", "first", "found", "great", "house", "large", "learn", "never", "other", "place", "plant", "point", "right", "small", "sound", "spell", "still", "study", "their", "there", "these", "thing", "think", "three", "water", "where", "which", "world", "write", "years"],
-  hard: ["abandon", "abstract", "academic", "accurate", "achieve", "acquire", "address", "adequate", "adjust", "advocate", "affect", "aggregate", "alternative", "ambiguous", "analysis", "annual", "anticipate", "apparent", "appreciate", "approach", "appropriate", "approximate", "arbitrary", "architecture", "article", "aspect", "assess", "assign", "assist", "assume", "athlete", "attempt", "attract", "authority", "automatic", "available", "average", "balance", "basement", "behavior", "benefit", "bias", "boundary", "business", "calendar", "campaign"]
-}
+const BACKGROUND_MUSIC = "https://res.cloudinary.com/dtvjjump9/video/upload/v1772952370/sounduniversestudio-repeat-gaming-background-music-instrumental-218942_dn5xzp.mp3"
+const CLICK_SOUND = "https://res.cloudinary.com/dtvjjump9/video/upload/v1772954731/universfield-interface-124464_hec3zs.mp3"
+const CORRECT_SOUND = "https://res.cloudinary.com/dtvjjump9/video/upload/v1772955479/freesound_community-rightanswer-95219_apmqg1.mp3"
+
+const electricKeyframes = `
+  @keyframes electric-flicker {
+    0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% {
+      text-shadow: 
+        0 0 10px rgba(34, 211, 238, 0.9),
+        0 0 20px rgba(34, 211, 238, 0.7),
+        0 0 30px rgba(34, 211, 238, 0.5),
+        0 0 40px rgba(34, 211, 238, 0.3),
+        0 0 60px rgba(34, 211, 238, 0.1);
+      opacity: 1;
+    }
+    20%, 24%, 55% {
+      text-shadow: none;
+      opacity: 0.8;
+    }
+  }
+  @keyframes electric-spark {
+    0%, 100% {
+      transform: scale(1);
+      filter: brightness(1);
+    }
+    50% {
+      transform: scale(1.02);
+      filter: brightness(1.3);
+    }
+  }
+`
 
 const DIFFICULTY_POINTS = {
   easy: 1,
   normal: 3,
-  hard: 6
+  hard: 6,
+  extreme: 10
 }
 
 const GAME_DURATION = 60
 
-type Difficulty = "easy" | "normal" | "hard"
+type Difficulty = "easy" | "normal" | "hard" | "extreme"
 
 interface GameStats {
   highestScore: number
-  totalTime: number
+  totalTime?: number
   wpm: number
 }
 
@@ -43,11 +72,13 @@ interface Star {
 }
 
 export default function TypingGame() {
+  const { data: session } = useSession()
   const [difficulty, setDifficulty] = useState<Difficulty | null>(null)
   const [currentWord, setCurrentWord] = useState("")
   const [input, setInput] = useState("")
   const [score, setScore] = useState(0)
   const [wordsCompleted, setWordsCompleted] = useState(0)
+  const [usedWords, setUsedWords] = useState<string[]>([])
   const [startTime, setStartTime] = useState<number | null>(null)
   const [isGameOver, setIsGameOver] = useState(false)
   const [wpm, setWpm] = useState(0)
@@ -58,28 +89,106 @@ export default function TypingGame() {
   const [stars, setStars] = useState<Star[]>([])
   const [stats, setStats] = useState<GameStats>({ highestScore: 0, totalTime: 0, wpm: 0 })
   const [mounted, setMounted] = useState(false)
+  const [soundEnabled, setSoundEnabled] = useState(true)
   const inputRef = useRef<HTMLInputElement>(null)
   const particleIdRef = useRef(0)
+  const scoreRef = useRef(0)
+  const emailRef = useRef<string | null>(null)
+
+  console.log("Session:", session)
+  console.log("Email ref:", emailRef.current)
+  const bgMusicRef = useRef<HTMLAudioElement | null>(null)
+  const clickSoundRef = useRef<HTMLAudioElement | null>(null)
+  const correctSoundRef = useRef<HTMLAudioElement | null>(null)
+
+  useEffect(() => {
+    if (session?.user?.email) {
+      emailRef.current = session.user.email
+    }
+  }, [session])
 
   useEffect(() => {
     setMounted(true)
-    const stored = localStorage.getItem("typing-stats")
-    if (stored) setStats(JSON.parse(stored))
+
+    if (session?.user?.email) {
+      fetch(`/api/users?email=${encodeURIComponent(session.user.email)}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data && !data.error) {
+            setStats({
+              highestScore: data.highestScore || 0,
+              wpm: data.wpm || 0
+            })
+          }
+        })
+        .catch(console.error)
+    }
+
+    bgMusicRef.current = new Audio(BACKGROUND_MUSIC)
+    bgMusicRef.current.loop = true
+    bgMusicRef.current.volume = 0.3
+
+    clickSoundRef.current = new Audio(CLICK_SOUND)
+    clickSoundRef.current.volume = 0.5
+
+    correctSoundRef.current = new Audio(CORRECT_SOUND)
+    correctSoundRef.current.volume = 0.4
+    correctSoundRef.current.load()
+
+    const playOnInteraction = () => {
+      if (soundEnabled && !difficulty && bgMusicRef.current) {
+        bgMusicRef.current.play().catch(() => {})
+      }
+      document.removeEventListener('click', playOnInteraction)
+    }
+    document.addEventListener('click', playOnInteraction)
+
+    if (soundEnabled && !difficulty && bgMusicRef.current) {
+      bgMusicRef.current.play().catch(() => {})
+    }
+
+    return () => {
+      document.removeEventListener('click', playOnInteraction)
+      bgMusicRef.current?.pause()
+      clickSoundRef.current?.pause() 
+    }
+  }, [session])
+
+  const getRandomWord = useCallback((diff: Difficulty, used: string[]) => {
+    const list = wordLists[diff]
+    const availableWords = list.filter(word => !used.includes(word))
+    if (availableWords.length === 0) return list[Math.floor(Math.random() * list.length)]
+    return availableWords[Math.floor(Math.random() * availableWords.length)]
   }, [])
 
-  const getRandomWord = useCallback((diff: Difficulty) => {
-    const list = WORD_LISTS[diff]
-    return list[Math.floor(Math.random() * list.length)]
-  }, [])
-
-  const saveStats = (newWpm: number) => {
+  const saveStats = async (newWpm: number) => {
+    console.log("Saving stats:", { score, wpm: newWpm, email: emailRef.current })
+    
     const newStats = {
       highestScore: Math.max(stats.highestScore, score),
-      totalTime: stats.totalTime + (startTime ? (Date.now() - startTime) / 1000 : 0),
       wpm: newWpm
     }
-    localStorage.setItem("typing-stats", JSON.stringify(newStats))
     setStats(newStats)
+
+    if (emailRef.current) {
+      try {
+        const res = await fetch("/api/users", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: emailRef.current,
+            score: score,
+            wpm: newWpm
+          })
+        })
+        const data = await res.json()
+        console.log("Stats saved:", data)
+      } catch (error) {
+        console.error("Error saving stats:", error)
+      }
+    } else {
+      console.log("No email found")
+    }
   }
 
   const spawnParticles = (x: number, y: number, count: number, color: string) => {
@@ -121,11 +230,15 @@ export default function TypingGame() {
   }, [particles.length])
 
   const startGame = (diff: Difficulty) => {
+    clickSoundRef.current!.currentTime = 0
+    clickSoundRef.current?.play().catch(() => {})
+    bgMusicRef.current?.pause()
     setDifficulty(diff)
-    setCurrentWord(getRandomWord(diff))
+    setCurrentWord(getRandomWord(diff, usedWords))
     setInput("")
     setScore(0)
     setWordsCompleted(0)
+    setUsedWords([])
     setStartTime(Date.now())
     setIsGameOver(false)
     setWpm(0)
@@ -167,6 +280,12 @@ export default function TypingGame() {
   }, [wordComplete])
 
   useEffect(() => {
+    if (!difficulty && soundEnabled && bgMusicRef.current) {
+      bgMusicRef.current.play().catch(() => {})
+    }
+  }, [difficulty, soundEnabled])
+
+  useEffect(() => {
     const newStars = [...Array(20)].map((_, i) => ({
       id: i,
       left: `${Math.random() * 100}%`,
@@ -187,10 +306,18 @@ export default function TypingGame() {
       const points = DIFFICULTY_POINTS[difficulty]
       setScore(prev => prev + points)
       setWordsCompleted(prev => prev + 1)
-      setCurrentWord(getRandomWord(difficulty))
+      setUsedWords(prev => {
+        const newUsed = [...prev, currentWord]
+        setCurrentWord(getRandomWord(difficulty, newUsed))
+        return newUsed
+      })
       setInput("")
       setWordComplete(true)
       spawnParticles(window.innerWidth / 2, window.innerHeight / 2, 12, "#22c55e")
+      if (correctSoundRef.current) {
+        correctSoundRef.current.currentTime = 0
+        correctSoundRef.current.play().catch(() => {})
+      }
       setTimeout(() => setWordComplete(false), 300)
     }
   }
@@ -213,6 +340,7 @@ export default function TypingGame() {
     setWpm(0)
     setTimeLeft(GAME_DURATION)
     setGlowIntensity(0)
+    bgMusicRef.current?.play().catch(() => {})
   }
 
   const getTimeColor = () => {
@@ -239,13 +367,23 @@ export default function TypingGame() {
           />
         ))}
 
-        <div className="relative w-full max-w-md bg-zinc-900/80 backdrop-blur-xl border border-zinc-800/50 rounded-3xl shadow-2xl p-8 flex flex-col gap-8 hover:border-zinc-700/50 transition-all duration-500">
+        <div className="relative w-full max-w-md sm:max-w-lg bg-zinc-900/80 backdrop-blur-xl border border-zinc-800/50 rounded-3xl shadow-2xl p-6 sm:p-8 flex flex-col gap-6 sm:gap-8 hover:border-zinc-700/50 transition-all duration-500">
           <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10 opacity-0 hover:opacity-100 transition-opacity duration-500" />
-          
-          <div className="flex flex-col items-center gap-2 text-center relative z-10">
-            <div className="relative">
-              <h1 className="text-3xl font-bold text-white tracking-tight">Typing Game</h1>
-              <div className="absolute -inset-2 bg-gradient-to-r from-blue-500 to-purple-500 blur-xl opacity-30" />
+
+            <div className="flex flex-col items-center gap-2 text-center relative z-10">
+            <style>{electricKeyframes}</style>
+            <div className="relative flex items-center gap-2">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-cyan-300" style={{
+                animation: "electric-flicker 0.15s infinite, electric-spark 2s ease-in-out infinite",
+                textShadow: '0 0 10px rgba(34, 211, 238, 0.9), 0 0 20px rgba(34, 211, 238, 0.7), 0 0 30px rgba(34, 211, 238, 0.5)'
+              }}>KEY DASH</h1>
+              <svg className="w-6 h-6 text-cyan-400" style={{
+                animation: "electric-spark 1.5s ease-in-out infinite",
+                filter: "drop-shadow(0 0 8px rgba(34, 211, 238, 0.9))"
+              }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              <div className="absolute -inset-2 bg-gradient-to-r from-cyan-500 to-blue-500 blur-xl opacity-40 animate-pulse" />
             </div>
             <p className="text-sm text-zinc-400">Select difficulty to start</p>
           </div>
@@ -253,7 +391,7 @@ export default function TypingGame() {
           <div className="h-px bg-gradient-to-r from-transparent via-zinc-700 to-transparent" />
 
           <div className="flex flex-col gap-3 relative z-10">
-            {(["easy", "normal", "hard"] as Difficulty[]).map((diff, i) => (
+            {(["easy", "normal", "hard", "extreme"] as Difficulty[]).map((diff, i) => (
               <button
                 key={diff}
                 onClick={() => startGame(diff)}
@@ -262,31 +400,20 @@ export default function TypingGame() {
                 <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${
                   diff === "easy" ? "bg-gradient-to-r from-green-500/20 to-transparent" :
                   diff === "normal" ? "bg-gradient-to-r from-yellow-500/20 to-transparent" :
-                  "bg-gradient-to-r from-red-500/20 to-transparent"
+                  diff === "hard" ? "bg-gradient-to-r from-red-500/20 to-transparent" :
+                  "bg-gradient-to-r from-purple-500/20 to-transparent"
                 }`} />
-                <span className="capitalable relative z-10 flex items-center gap-2">
+                <span className="capitalize relative z-10 flex items-center gap-2">
                   {diff === "easy" && <span className="w-2 h-2 rounded-full bg-green-400 shadow-[0_0_10px_#4ade80]" />}
                   {diff === "normal" && <span className="w-2 h-2 rounded-full bg-yellow-400 shadow-[0_0_10px_#facc15]" />}
                   {diff === "hard" && <span className="w-2 h-2 rounded-full bg-red-400 shadow-[0_0_10px_#f87171]" />}
+                  {diff === "extreme" && <span className="w-2 h-2 rounded-full bg-purple-400 shadow-[0_0_10px_#a855f7]" />}
                   {diff}
                 </span>
                 <span className="text-zinc-400 text-xs relative z-10">{DIFFICULTY_POINTS[diff]} pts/word</span>
               </button>
             ))}
           </div>
-
-          {mounted && stats.highestScore > 0 && (
-            <>
-              <div className="h-px bg-gradient-to-r from-transparent via-zinc-700 to-transparent" />
-              <div className="flex flex-col gap-2 text-center relative z-10">
-                <p className="text-xs text-zinc-500 uppercase tracking-wider">Overall Stats</p>
-                <p className="text-sm text-zinc-300">
-                  <span className="text-white font-medium">{stats.highestScore}</span> high score &bull; 
-                  <span className="text-white font-medium ml-2">{stats.wpm}</span> avg WPM
-                </p>
-              </div>
-            </>
-          )}
         </div>
       </main>
     )
@@ -312,7 +439,7 @@ export default function TypingGame() {
       ))}
 
       <div 
-        className={`relative w-full max-w-lg bg-zinc-900/80 backdrop-blur-xl border rounded-3xl shadow-2xl p-8 flex flex-col gap-6 transition-all duration-300 ${
+        className={`relative w-full max-w-2xl bg-zinc-900/80 backdrop-blur-xl border rounded-3xl shadow-2xl p-6 md:p-8 flex flex-col gap-4 md:gap-6 transition-all duration-300 ${
           glowIntensity > 0 ? "scale-[1.02]" : "scale-100"
         } ${timeLeft <= 15 && !isGameOver ? "border-red-500/50" : "border-zinc-800/50"}`}
         style={{
@@ -324,45 +451,51 @@ export default function TypingGame() {
         <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-blue-500/5 via-purple-500/5 to-pink-500/5" />
         
         <div className="flex items-center justify-between relative z-10">
-          <div className="flex flex-col">
-            <span className="text-xs text-zinc-500 uppercase tracking-wider">Difficulty</span>
-            <span className={`text-sm font-medium capitalize ${
-              difficulty === "easy" ? "text-green-400" :
-              difficulty === "normal" ? "text-yellow-400" : "text-red-400"
-            }`}>
-              {difficulty}
-            </span>
+          {/* Left: Difficulty and Time */}
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-col">
+              <span className="text-xs text-zinc-500 uppercase tracking-wider">Difficulty</span>
+              <span className={`text-sm font-medium capitalize ${
+                difficulty === "easy" ? "text-green-400" :
+                difficulty === "normal" ? "text-yellow-400" :
+                difficulty === "hard" ? "text-red-400" : "text-purple-400"
+              }`}>
+                {difficulty}
+              </span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-xs text-zinc-500 uppercase tracking-wider">Time</span>
+              <div className={`text-xl font-bold tracking-wider transition-all duration-300 ${getTimeColor()}`}>
+                {timeLeft}
+              </div>
+            </div>
           </div>
           
-          <div className="flex flex-col items-center">
-            <div className={`text-4xl font-bold tracking-wider transition-all duration-300 ${getTimeColor()}`}>
-              {timeLeft}
-            </div>
-            <span className="text-xs text-zinc-500 uppercase tracking-wider">seconds</span>
+          {/* Center: Score */}
+          <div className="flex flex-col text-center">
+            <span className="text-xs text-zinc-500 uppercase tracking-wider">Score</span>
+            <span 
+              className={`text-4xl sm:text-5xl font-bold ${score > stats.highestScore ? "text-cyan-400" : "text-white"}`}
+              style={score > stats.highestScore ? {
+                animation: "electric-flicker 0.1s infinite, electric-spark 0.5s ease-in-out infinite",
+                textShadow: '0 0 20px rgba(34, 211, 238, 1), 0 0 40px rgba(34, 211, 238, 0.9), 0 0 60px rgba(34, 211, 238, 0.7), 0 0 80px rgba(34, 211, 238, 0.5), 0 0 100px rgba(34, 211, 238, 0.3)',
+                filter: "brightness(1.3)"
+              } : undefined}
+            >{score}</span>
           </div>
 
+          {/* Right: WPM */}
           <div className="flex flex-col text-right">
             <span className="text-xs text-zinc-500 uppercase tracking-wider">WPM</span>
-            <span className="text-sm font-medium text-white">{wpm}</span>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between relative z-10">
-          <div className="flex flex-col">
-            <span className="text-xs text-zinc-500 uppercase tracking-wider">Score</span>
-            <span className="text-2xl font-bold text-white">{score}</span>
-          </div>
-          <div className="flex flex-col text-right">
-            <span className="text-xs text-zinc-500 uppercase tracking-wider">Words</span>
-            <span className="text-sm font-medium text-white">{wordsCompleted}</span>
+            <span className="text-xl font-bold text-white">{wpm}</span>
           </div>
         </div>
 
         <div className="h-px bg-gradient-to-r from-transparent via-zinc-700 to-transparent" />
 
-        <div className="flex flex-col items-center gap-6 py-6 relative z-10">
+        <div className="flex flex-col items-center gap-4 md:gap-6 py-4 md:py-6 px-2 relative z-10">
           <div 
-            className={`text-4xl md:text-5xl font-bold text-white tracking-[0.3em] transition-all duration-200 ${
+            className={`text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white tracking-[0.2em] sm:tracking-[0.3em] transition-all duration-200 break-all text-center ${
               wordComplete ? "scale-110" : "scale-100"
             }`}
             style={{
@@ -395,7 +528,7 @@ export default function TypingGame() {
             value={input}
             onChange={handleInput}
             onBlur={() => !isGameOver && inputRef.current?.focus()}
-            className="w-full max-w-xs bg-zinc-800/50 border border-zinc-700/30 hover:border-zinc-600/50 focus:border-blue-500/50 rounded-2xl px-6 py-4 text-center text-white text-xl font-medium outline-none transition-all duration-300 placeholder:text-zinc-600"
+            className="w-full max-w-xs sm:max-w-sm md:max-w-md bg-zinc-800/50 border border-zinc-700/30 hover:border-zinc-600/50 focus:border-blue-500/50 rounded-2xl px-4 py-3 md:px-6 md:py-4 text-center text-lg md:text-xl font-medium outline-none transition-all duration-300 placeholder:text-zinc-600"
             placeholder="Type here..."
             autoFocus
             disabled={isGameOver}
@@ -403,21 +536,21 @@ export default function TypingGame() {
         </div>
 
         {isGameOver && (
-          <div className="absolute inset-0 bg-zinc-950/80 backdrop-blur-sm rounded-3xl flex flex-col items-center justify-center gap-6 z-20 animate-in fade-in duration-300">
+          <div className="absolute inset-0 bg-zinc-950/80 backdrop-blur-sm rounded-3xl flex flex-col items-center justify-center gap-4 sm:gap-6 z-20 animate-in fade-in duration-300 p-4">
             <div className="text-center">
-              <h2 className="text-3xl font-bold text-white mb-4">Game Over!</h2>
-              <div className="flex gap-8 justify-center mb-4">
+              <h2 className="text-2xl sm:text-3xl font-bold text-white mb-4">Game Over!</h2>
+              <div className="flex gap-4 sm:gap-8 justify-center mb-4">
                 <div>
                   <p className="text-xs text-zinc-500 uppercase tracking-wider">Score</p>
-                  <p className="text-2xl font-bold text-white">{score}</p>
+                  <p className="text-xl sm:text-2xl font-bold text-white">{score}</p>
                 </div>
                 <div>
                   <p className="text-xs text-zinc-500 uppercase tracking-wider">Words</p>
-                  <p className="text-2xl font-bold text-white">{wordsCompleted}</p>
+                  <p className="text-xl sm:text-2xl font-bold text-white">{wordsCompleted}</p>
                 </div>
                 <div>
                   <p className="text-xs text-zinc-500 uppercase tracking-wider">WPM</p>
-                  <p className="text-2xl font-bold text-white">{wpm}</p>
+                  <p className="text-xl sm:text-2xl font-bold text-white">{wpm}</p>
                 </div>
               </div>
             </div>

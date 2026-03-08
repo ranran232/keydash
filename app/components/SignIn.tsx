@@ -2,7 +2,34 @@
 
 import { signIn } from "next-auth/react"
 import { useState } from "react"
-import Image from "next/image"
+
+const electricKeyframes = `
+  @keyframes electric-flicker {
+    0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% {
+      text-shadow: 
+        0 0 10px rgba(34, 211, 238, 0.9),
+        0 0 20px rgba(34, 211, 238, 0.7),
+        0 0 30px rgba(34, 211, 238, 0.5),
+        0 0 40px rgba(34, 211, 238, 0.3),
+        0 0 60px rgba(34, 211, 238, 0.1);
+      opacity: 1;
+    }
+    20%, 24%, 55% {
+      text-shadow: none;
+      opacity: 0.8;
+    }
+  }
+  @keyframes electric-spark {
+    0%, 100% {
+      transform: scale(1);
+      filter: brightness(1);
+    }
+    50% {
+      transform: scale(1.02);
+      filter: brightness(1.3);
+    }
+  }
+`
 
 export default function SignIn() {
   const [loading, setLoading] = useState(false)
@@ -13,23 +40,32 @@ export default function SignIn() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center px-4">
+    <main className="flex min-h-screen flex-col items-center justify-center px-4 gap-8">
+
+      {/* Logo - Above card */}
+      <style>{electricKeyframes}</style>
+      <div className="relative flex items-center gap-2">
+        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-cyan-300" style={{
+          animation: "electric-flicker 0.15s infinite, electric-spark 2s ease-in-out infinite",
+          textShadow: '0 0 10px rgba(34, 211, 238, 0.9), 0 0 20px rgba(34, 211, 238, 0.7), 0 0 30px rgba(34, 211, 238, 0.5)'
+        }}>KEY DASH</h1>
+        <svg className="w-8 h-8 text-cyan-400" style={{
+          animation: "electric-spark 1.5s ease-in-out infinite",
+          filter: "drop-shadow(0 0 8px rgba(34, 211, 238, 0.9))"
+        }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+        </svg>
+        <div className="absolute -inset-2 bg-gradient-to-r from-cyan-500 to-blue-500 blur-xl opacity-40 animate-pulse" style={{ zIndex: -1 }} />
+      </div>
 
       {/* Card */}
-      <div className="relative w-full max-w-sm bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl p-8 flex flex-col gap-8">
+      <div className="w-full max-w-md sm:max-w-lg bg-zinc-900/50 backdrop-blur-sm border border-zinc-800/50 rounded-2xl shadow-2xl p-6 sm:p-8 flex flex-col gap-6">
 
-        {/* Logo / Brand */}
-        <div className="flex flex-col items-center gap-2 text-center">
-          <div className="flex items-center gap-1">
-            <div className="relative h-16 w-32">
-              <Image src="https://images.pexels.com/photos/34780944/pexels-photo-34780944.jpeg" alt="logo" fill className="object-contain rounded-lg" />
-            </div>
-          </div>
-          <p className="text-sm text-zinc-400">Sign in to continue to your account</p>
+        {/* Header */}
+        <div className="text-center">
+          <h1 className="text-xl font-semibold text-white mb-1">Welcome back</h1>
+          <p className="text-sm text-zinc-500">Sign in to continue to your account</p>
         </div>
-
-        {/* Divider */}
-        <div className="h-px bg-zinc-800" />
 
         {/* Google Sign In */}
         <button
@@ -56,14 +92,13 @@ export default function SignIn() {
         {/* Footer */}
         <p className="text-center text-xs text-zinc-600">
           By continuing, you agree to our{" "}
-          <a href="#" className="text-zinc-400 hover:text-white underline underline-offset-2 transition-colors">
+          <a href="#" className="text-zinc-500 hover:text-white transition-colors">
             Terms
           </a>{" "}
           and{" "}
-          <a href="#" className="text-zinc-400 hover:text-white underline underline-offset-2 transition-colors">
+          <a href="#" className="text-zinc-500 hover:text-white transition-colors">
             Privacy Policy
           </a>
-          .
         </p>
       </div>
     </main>
