@@ -1,20 +1,25 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createOrUpdateUser, getUserByEmail, updateUserStats } from "../../lib/models/user"
 
+// POST: create or update user
 export async function POST(request: NextRequest) {
   try {
-   const { email, name = "Unknown", image = "" } = await request.json()
+    const { email, name, image } = await request.json()
 
     console.log("POST /api/users received:", { email, name, image })
 
-    if (!email || !name) {
+    if (!email) {
       return NextResponse.json(
-        { error: "Email and Name is required" },
+        { error: "Email is required" },
         { status: 400 }
       )
     }
 
-    const user = await createOrUpdateUser(email, { name, image })
+    const user = await createOrUpdateUser(email, {
+      name,
+      image,
+    })
+
     console.log("User created/updated:", user)
 
     return NextResponse.json(user, { status: 201 })
