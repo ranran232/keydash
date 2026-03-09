@@ -8,9 +8,9 @@ export async function POST(request: NextRequest) {
 
     console.log("POST /api/users received:", { email, name, image })
 
-    if (!email) {
+    if (!email || !name) {
       return NextResponse.json(
-        { error: "Email is required" },
+        { error: "Email and Name is required" },
         { status: 400 }
       )
     }
