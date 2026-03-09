@@ -3,13 +3,14 @@ import NextAuth from "next-auth"
 import Google from "next-auth/providers/google"
  
 export const { handlers, signIn, signOut, auth } = NextAuth({
-secret:process.env.BETTER_AUTH_SECRET,
+ secret:process.env.BETTER_AUTH_SECRET,
   providers: [Google],
-   callbacks: {
-     async signIn({ user }) {
+  callbacks: {
+    async signIn({ user }) {
       if (user.email) {
         try {
           const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000'
+          console.log("Creating user with:", { email: user.email, name: user.name, image: user.image, baseUrl })
           await fetch(`${baseUrl}/api/users`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -25,8 +26,13 @@ secret:process.env.BETTER_AUTH_SECRET,
       }
       return true
     },
-    authorized: async ({ auth }) => {
-      
+    async session({ session, token }) {
+      if (session.user?.email && token.name) {
+        session.user.name = token.name as string
+      }
+      return session
+    },
+    async authorized({ auth }) {
       return !!auth
     },
   },

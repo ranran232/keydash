@@ -6,6 +6,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { email, name, image } = body
 
+    console.log("POST /api/users received:", { email, name, image })
+
     if (!email) {
       return NextResponse.json(
         { error: "Email is required" },
@@ -14,6 +16,7 @@ export async function POST(request: NextRequest) {
     }
 
     const user = await createOrUpdateUser(email, { name, image })
+    console.log("User created/updated:", user)
 
     return NextResponse.json(user, { status: 201 })
   } catch (error) {

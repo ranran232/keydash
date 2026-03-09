@@ -95,8 +95,6 @@ export default function TypingGame() {
   const scoreRef = useRef(0)
   const emailRef = useRef<string | null>(null)
 
-  console.log("Session:", session)
-  console.log("Email ref:", emailRef.current)
   const bgMusicRef = useRef<HTMLAudioElement | null>(null)
   const clickSoundRef = useRef<HTMLAudioElement | null>(null)
   const correctSoundRef = useRef<HTMLAudioElement | null>(null)
@@ -162,7 +160,7 @@ export default function TypingGame() {
   }, [])
 
   const saveStats = async (newWpm: number) => {
-    console.log("Saving stats:", { score, wpm: newWpm, email: emailRef.current })
+  
     
     const newStats = {
       highestScore: Math.max(stats.highestScore, score),
@@ -182,7 +180,7 @@ export default function TypingGame() {
           })
         })
         const data = await res.json()
-        console.log("Stats saved:", data)
+      
       } catch (error) {
         console.error("Error saving stats:", error)
       }
