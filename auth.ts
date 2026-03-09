@@ -28,45 +28,35 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return token
     },
 
-   // Make session include token info
-async session({ session, token }) {
-  if (session.user) {
-    session.user.email = (token.email || "") as string
-    session.user.name = (token.name || "") as string
-    session.user.image = (token.picture || "") as string
-  }
-  return session
-},
-
-    // Save user to your database on sign-in
-    async signIn({ user, profile }) {
-      if (!user.email) return false
-
-      try {
-        const baseUrl = process.env.VERCEL_URL
-          ? `https://${process.env.VERCEL_URL}`
-          : "http://localhost:3000"
-
-        await fetch(`${baseUrl}/api/users`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email: user.email,
-            name: profile?.name || user.name || "",
-            image: profile?.picture || user.image || "",
-          }),
-        })
-        console.log("Sending user to API:", {
-  email: user.email,
-  name: profile?.name || user.name || "Unknown",
-  image: profile?.picture || user.image || "",
-})
-      } catch (err) {
-        console.error("Error saving user:", err)
+    // Make session include token info
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.email = token.email || ""
+        session.user.name = token.name || ""
+        session.user.image = token.picture || ""
       }
-
-      return true
+      return session
     },
+
+  async signIn({ user, profile }) {
+  if (!user.email) return false
+
+  const baseUrl = process.env.VERCEL_URL
+    ? `https://${process.env.VERCEL_URL}`
+    : "http://localhost:3000"
+
+  await fetch(`${baseUrl}/api/users`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      email: user.email,
+      name: profile?.name || user.name || "Unknown",
+      image: profile?.picture || user.image || "",
+    }),
+  })
+
+  return true
+},
 
     async authorized({ auth }) {
       return !!auth
