@@ -28,8 +28,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               email: user.email,
-              name: user.name,
-              image: user.image
+             name: user.name ?? "",
+          image: user.image ?? ""
             })
           })
         } catch (error) {
