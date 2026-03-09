@@ -18,17 +18,17 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   ],
   callbacks: {
-    // Save extra info in JWT token
+    // Save extra info in JWT token on first sign-in
     async jwt({ token, user, profile }) {
       if (user) {
         token.email = user.email
-        token.name = profile?.name || user.name || ""
-        token.picture = profile?.picture || user.image || ""
+        token.name = profile?.name || token.name || "Unknown"
+        token.picture = profile?.picture || token.picture || ""
       }
       return token
     },
 
-    // Make session include token info
+    // Include JWT info in the session
     async session({ session, token }) {
       if (session.user) {
         session.user.email = token.email || ""
@@ -38,25 +38,26 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return session
     },
 
-  async signIn({ user }) {
-  if (!user.email) return false
+    // Sign-in callback: store user in MongoDB
+    async signIn({ user, profile }) {
+      if (!user.email) return false
 
-  const baseUrl = process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : "http://localhost:3000"
+      const baseUrl = process.env.VERCEL_URL
+        ? `https://${process.env.VERCEL_URL}`
+        : "http://localhost:3000"
 
-  await fetch(`${baseUrl}/api/users`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      email: user.email,
-      name: user.name || "Unknown",
-      image: user.image || "",
-    }),
-  })
+      await fetch(`${baseUrl}/api/users`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: user.email,
+          name: profile?.name || "Unknown",
+          image: profile?.picture || "",
+        }),
+      })
 
-  return true
-},
+      return true
+    },
 
     async authorized({ auth }) {
       return !!auth
