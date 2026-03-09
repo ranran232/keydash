@@ -1,5 +1,6 @@
 import NextAuth from "next-auth"
 import GoogleProvider from "next-auth/providers/google"
+import { createOrUpdateUser } from "./app/lib/models/user"
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   secret: process.env.BETTER_AUTH_SECRET,
@@ -18,17 +19,21 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   ],
   callbacks: {
-    // Save extra info in JWT token on first sign-in
-    async jwt({ token, user, profile }) {
-      if (user) {
-        token.email = user.email
-        token.name = profile?.name || token.name || "Unknown"
-        token.picture = profile?.picture || token.picture || ""
-      }
-      return token
-    },
+async jwt({ token, user, profile }) {
+  if (user && user.email && profile) {
+    token.email = user.email
+    token.name = profile.name || token.name || "Unknown"
+    token.picture = profile.picture || token.picture || ""
 
-    // Include JWT info in the session
+    // Save user in MongoDB
+    await createOrUpdateUser(user.email, {
+      name: profile?.name || "Unknown",
+      image: profile?.picture || "",
+    })
+  }
+  // Always return token (never false)
+  return token
+},
     async session({ session, token }) {
       if (session.user) {
         session.user.email = token.email || ""
@@ -36,31 +41,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.image = token.picture || ""
       }
       return session
-    },
-
-    // Sign-in callback: store user in MongoDB
-    async signIn({ user, profile }) {
-      if (!user.email) return false
-
-      const baseUrl = process.env.VERCEL_URL
-        ? `https://${process.env.VERCEL_URL}`
-        : "http://localhost:3000"
-
-      await fetch(`${baseUrl}/api/users`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: user.email,
-          name: profile?.name || "Unknown",
-          image: profile?.picture || "",
-        }),
-      })
-      console.log(user.email, profile?.name, profile?.picture)
-      return true
-    },
-
-    async authorized({ auth }) {
-      return !!auth
     },
   },
   pages: {
