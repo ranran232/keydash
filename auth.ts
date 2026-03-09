@@ -55,7 +55,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           image: profile?.picture || "",
         }),
       })
-
+      console.log(user.email, profile?.name, profile?.picture)
       return true
     },
 
