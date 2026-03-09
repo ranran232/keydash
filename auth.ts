@@ -19,7 +19,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   ],
   callbacks: {
-    async signIn({ user }) {
+    async signIn({ user, profile }) {
       if (user.email) {
         try {
           const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000'
@@ -28,8 +28,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               email: user.email,
-             name: user.name ?? "",
-          image: user.image ?? ""
+           name: profile?.name,
+        image: profile?.picture
             })
           })
         } catch (error) {
