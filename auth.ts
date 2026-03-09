@@ -38,7 +38,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return session
     },
 
-  async signIn({ user, profile }) {
+  async signIn({ user }) {
   if (!user.email) return false
 
   const baseUrl = process.env.VERCEL_URL
@@ -50,8 +50,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       email: user.email,
-      name: profile?.name || user.name || "Unknown",
-      image: profile?.picture || user.image || "",
+      name: user.name || "Unknown",
+      image: user.image || "",
     }),
   })
 
