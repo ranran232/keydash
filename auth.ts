@@ -4,13 +4,25 @@ import Google from "next-auth/providers/google"
  
 export const { handlers, signIn, signOut, auth } = NextAuth({
  secret:process.env.BETTER_AUTH_SECRET,
-  providers: [Google],
+  providers: [
+    Google({
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      authorization: {
+        params: {
+          prompt: "consent",
+          access_type: "offline",
+          response_type: "code",
+          scope: "openid email profile",
+        },
+      },
+    }),
+  ],
   callbacks: {
     async signIn({ user }) {
       if (user.email) {
         try {
           const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000'
-          console.log("Creating user with:", { email: user.email, name: user.name, image: user.image, baseUrl })
           await fetch(`${baseUrl}/api/users`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
