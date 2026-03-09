@@ -18,26 +18,36 @@ export async function getUserCollection(): Promise<Collection<User>> {
   return db.collection("users") as unknown as Collection<User>
 }
 
-export async function createOrUpdateUser(email: string, userData: Partial<User>): Promise<User> {
+export async function createOrUpdateUser(
+  email: string,
+  userData: Partial<User>
+): Promise<User> {
   const collection = await getUserCollection()
-  
+
   const existingUser = await collection.findOne({ email })
-  
+
+  // Ensure name and image are never undefined
+  const safeData = {
+    name: userData.name || "Unknown",
+    image: userData.image || "",
+    ...userData, // include any other fields like highestScore
+    updatedAt: new Date(),
+  }
+
   if (existingUser) {
     await collection.updateOne(
       { email },
-      { $set: { ...userData, updatedAt: new Date() } }
+      { $set: safeData }
     )
-    return { ...existingUser, ...userData }
+    return { ...existingUser, ...safeData }
   }
-  
+
   const newUser: User = {
     email,
-    ...userData,
+    ...safeData,
     createdAt: new Date(),
-    updatedAt: new Date()
   }
-  
+
   const result = await collection.insertOne(newUser)
   return { ...newUser, _id: result.insertedId }
 }
