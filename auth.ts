@@ -56,6 +56,11 @@ async session({ session, token }) {
             image: profile?.picture || user.image || "",
           }),
         })
+        console.log("Sending user to API:", {
+  email: user.email,
+  name: profile?.name || user.name || "Unknown",
+  image: profile?.picture || user.image || "",
+})
       } catch (err) {
         console.error("Error saving user:", err)
       }
