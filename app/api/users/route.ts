@@ -3,8 +3,7 @@ import { createOrUpdateUser, getUserByEmail, updateUserStats } from "../../lib/m
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { email, name, image } = body
+   const { email, name = "Unknown", image = "" } = await request.json()
 
     console.log("POST /api/users received:", { email, name, image })
 
