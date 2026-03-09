@@ -25,7 +25,7 @@ export async function createOrUpdateUser(
   const collection = await getUserCollection()
 
   const existingUser = await collection.findOne({ email })
-
+  console.log('from user.ts', userData)
   // Ensure name and image are never undefined
   const safeData = {
     name: userData.name || "Unknown",
