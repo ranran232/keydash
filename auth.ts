@@ -6,10 +6,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 secret:process.env.BETTER_AUTH_SECRET,
   providers: [Google],
    callbacks: {
-    async signIn({ user }) {
+     async signIn({ user }) {
       if (user.email) {
         try {
-          await fetch(`${process.env.NEXTAUTH_URL || "http://localhost:3000"}/api/users`, {
+          const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000'
+          await fetch(`${baseUrl}/api/users`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({

@@ -37,13 +37,10 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const user = await getUserByEmail(email)
+    let user = await getUserByEmail(email)
 
     if (!user) {
-      return NextResponse.json(
-        { error: "User not found" },
-        { status: 404 }
-      )
+      user = await createOrUpdateUser(email, {})
     }
 
     return NextResponse.json(user)
