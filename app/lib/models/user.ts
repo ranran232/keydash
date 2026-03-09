@@ -57,13 +57,14 @@ export async function updateUserStats(email: string, score: number, wpm: number)
   }
   
   const newHighestScore = Math.max(user.highestScore || 0, score)
+  const newHighestWpm = Math.max(user.wpm || 0, wpm)
   
   await collection.updateOne(
     { email },
     { 
       $set: { 
         highestScore: newHighestScore,
-        wpm: wpm,
+        wpm: newHighestWpm,
         updatedAt: new Date()
       }
     }
@@ -72,7 +73,12 @@ export async function updateUserStats(email: string, score: number, wpm: number)
   return { 
     ...user, 
     highestScore: newHighestScore, 
-    wpm,
+    wpm: newHighestWpm,
     updatedAt: new Date()
   }
+}
+
+export async function getAllUsers(sortBy: "highestScore" | "wpm" = "highestScore"): Promise<User[]> {
+  const collection = await getUserCollection()
+  return collection.find({}).sort({ [sortBy]: -1 }).toArray()
 }

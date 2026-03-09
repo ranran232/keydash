@@ -70,13 +70,19 @@ export default function Header() {
     return () => document.removeEventListener("visibilitychange", handleVisibilityChange)
   }, [session, fetchUserData])
 
+  useEffect(() => {
+    if (profileOpen && session?.user?.email) {
+      fetchUserData()
+    }
+  }, [profileOpen, session, fetchUserData])
+
   const handleSignOut = () => {
     signOut({ callbackUrl: "/signin" })
   }
 
   if (status === "loading") {
     return (
-      <header className="fixed top-0 left-0 right-0 h-16 bg-zinc-900/80 backdrop-blur-md border-b border-zinc-800/50 z-50">
+      <header className="fixed top-0 left-0 right-0 h-16 bg-zinc-900 border-b border-zinc-800/50 z-50">
         <div className="h-full max-w-7xl mx-auto px-4 flex items-center justify-between">
           <div className="w-20 h-8 bg-zinc-800 animate-pulse rounded" />
           <div className="w-8 h-8 bg-zinc-800 animate-pulse rounded-full" />
@@ -90,7 +96,7 @@ export default function Header() {
   return (
     <>
       <style>{electricKeyframes}</style>
-      <header className="fixed top-0 left-0 right-0 h-16 bg-zinc-900/80 backdrop-blur-md border-b border-zinc-800/50 z-50">
+      <header className="fixed top-0 left-0 right-0 h-16 bg-zinc-900 border-b border-zinc-800/50 z-50">
         <div className="h-full max-w-7xl mx-auto px-4 flex items-center justify-between">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-1">
@@ -112,6 +118,17 @@ export default function Header() {
 
           {/* Right side */}
           <div className="flex items-center gap-3">
+            {/* Leaderboard */}
+            <Link
+              href="/leaderboard"
+              className="hidden sm:flex items-center gap-2 px-3 py-2 text-sm text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0v14a2 012 2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+              <span>Leaderboard</span>
+            </Link>
+
             {/* Profile - Clickable */}
             <button
               onClick={() => setProfileOpen(true)}
@@ -167,6 +184,16 @@ export default function Header() {
         {/* Mobile menu */}
         {menuOpen && (
           <div className="sm:hidden absolute top-full left-0 right-0 bg-zinc-900/95 backdrop-blur-md border-b border-zinc-800 p-4 flex flex-col gap-3">
+            <Link
+              href="/leaderboard"
+              onClick={() => setMenuOpen(false)}
+              className="flex items-center justify-center gap-2 px-4 py-2 text-sm text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer w-full"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0v14a2 012 2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+              Leaderboard
+            </Link>
             <div className="text-sm text-zinc-400 text-center pb-2 border-b border-zinc-800">
               {userData?.name || session.user?.name || "Player"}
             </div>
@@ -185,6 +212,8 @@ export default function Header() {
 
       {/* Spacer for fixed header */}
       <div className="h-16" />
+      {/* Spacer for fixed footer */}
+      <div />
 
       {/* Profile Modal */}
       {profileOpen && (
