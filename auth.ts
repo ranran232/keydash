@@ -1,13 +1,12 @@
-
 import NextAuth from "next-auth"
-import Google from "next-auth/providers/google"
- 
+import GoogleProvider from "next-auth/providers/google"
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
- secret:process.env.BETTER_AUTH_SECRET,
+  secret: process.env.BETTER_AUTH_SECRET,
   providers: [
-    Google({
-      clientId: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
       authorization: {
         params: {
           prompt: "consent",
@@ -19,36 +18,56 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   ],
   callbacks: {
-    async signIn({ user, profile }) {
-      if (user.email) {
-        try {
-          const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000'
-          await fetch(`${baseUrl}/api/users`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              email: user.email,
-           name: profile?.name,
-        image: profile?.picture
-            })
-          })
-        } catch (error) {
-          console.error("Error saving user:", error)
-        }
+    // Save extra info in JWT token
+    async jwt({ token, user, profile }) {
+      if (user) {
+        token.email = user.email
+        token.name = profile?.name || user.name || ""
+        token.picture = profile?.picture || user.image || ""
       }
+      return token
+    },
+
+   // Make session include token info
+async session({ session, token }) {
+  if (session.user) {
+    session.user.email = (token.email || "") as string
+    session.user.name = (token.name || "") as string
+    session.user.image = (token.picture || "") as string
+  }
+  return session
+},
+
+    // Save user to your database on sign-in
+    async signIn({ user, profile }) {
+      if (!user.email) return false
+
+      try {
+        const baseUrl = process.env.VERCEL_URL
+          ? `https://${process.env.VERCEL_URL}`
+          : "http://localhost:3000"
+
+        await fetch(`${baseUrl}/api/users`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: user.email,
+            name: profile?.name || user.name || "",
+            image: profile?.picture || user.image || "",
+          }),
+        })
+      } catch (err) {
+        console.error("Error saving user:", err)
+      }
+
       return true
     },
-    async session({ session, token }) {
-      if (session.user?.email && token.name) {
-        session.user.name = token.name as string
-      }
-      return session
-    },
+
     async authorized({ auth }) {
       return !!auth
     },
   },
-  pages:{
-    signIn:"/signin",
-  }
+  pages: {
+    signIn: "/signin",
+  },
 })
