@@ -12,7 +12,7 @@ export default function Footer() {
         
         <div className="flex items-center gap-3 sm:gap-6">
           <Link
-            href="https://linkedin.com/in/randy-olais"
+            href=""
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-1 sm:gap-2 text-sm text-zinc-500 hover:text-white transition-colors"
@@ -24,7 +24,7 @@ export default function Footer() {
           </Link>
           
           <a
-            href="mailto:afacebu.randy@gmail.com"
+            href=""
             className="flex items-center gap-1 sm:gap-2 text-sm text-zinc-500 hover:text-white transition-colors"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -34,7 +34,7 @@ export default function Footer() {
           </a>
           
           <Link
-            href="https://randyolais.vercel.app"
+            href=""
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-1 sm:gap-2 text-sm text-zinc-500 hover:text-white transition-colors"
