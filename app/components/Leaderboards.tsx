@@ -88,7 +88,7 @@ const Leaderboards = ({ users, sortBy, currentUserEmail }: LeaderboardsProps) =>
               
               <div className="relative">
                 {index === 0 && (
-                  <svg className="absolute -top-2 left-1/2 -translate-x-1/2 w-4 h-4 text-yellow-400" viewBox="0 0 24 24" fill="currentColor">
+                  <svg className="absolute -top-6 left-1/2 -translate-x-1/2 w-7 h-7  text-yellow-400" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z"/>
                   </svg>
                 )}
