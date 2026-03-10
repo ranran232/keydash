@@ -18,31 +18,40 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       },
     }),
   ],
-  callbacks: {
-async jwt({ token, user, profile }) {
-  if (user && user.email && profile) {
-    token.email = user.email
-    token.name = profile.name || token.name || "Unknown"
-    token.picture = profile.picture || token.picture || ""
 
-    // Save user in MongoDB
-    await createOrUpdateUser(user.email, {
-      name: profile?.name || "Unknown",
-      image: profile?.picture || "",
-    })
-  }
-  // Always return token (never false)
-  return token
-},
+  callbacks: {
+    async authorized({ auth }) {
+      // Allow access only if user is logged in
+      return !!auth
+    },
+
+    async jwt({ token, user, profile }) {
+      if (user && user.email && profile) {
+        token.email = user.email
+        token.name = profile.name || token.name || "Unknown"
+        token.picture = profile.picture || token.picture || ""
+
+        // Save user in MongoDB
+        await createOrUpdateUser(user.email, {
+          name: profile?.name || "Unknown",
+          image: profile?.picture || "",
+        })
+      }
+
+      return token
+    },
+
     async session({ session, token }) {
       if (session.user) {
         session.user.email = token.email || ""
         session.user.name = token.name || ""
         session.user.image = token.picture || ""
       }
+
       return session
     },
   },
+
   pages: {
     signIn: "/signin",
   },
